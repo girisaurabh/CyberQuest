@@ -23,9 +23,12 @@ function ProtectedRoute({ children }) {
 }
 
 function AppShell() {
+  const location = useLocation();
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
+
   return (
     <div className="min-h-screen flex text-white">
-      <Sidebar />
+      {!isAuthPage && <Sidebar />}
       <main className="flex-1 min-w-0 pb-24 md:pb-0">
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -39,7 +42,7 @@ function AppShell() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      <MobileNav />
+      {!isAuthPage && <MobileNav />}
     </div>
   );
 }

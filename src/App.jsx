@@ -5,6 +5,7 @@ import MobileNav from "./components/MobileNav";
 import Dashboard from "./pages/dashboard";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Missions from "./pages/Missions";
+import Journey from "./pages/Journey";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -35,7 +36,7 @@ function AppShell() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/journey" element={<ProtectedRoute><PlaceholderPage title="Your Journey" description="Follow the cybersecurity roadmap from foundations to specialization." /></ProtectedRoute>} />
+          <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
           <Route path="/missions" element={<ProtectedRoute><Missions /></ProtectedRoute>} />
           <Route path="/rewards" element={<ProtectedRoute><PlaceholderPage title="Rewards" description="Track your XP, badges, achievements, and streaks." /></ProtectedRoute>} />
           <Route path="/skills" element={<ProtectedRoute><PlaceholderPage title="Skills" description="Build and track your cybersecurity skill profile." /></ProtectedRoute>} />

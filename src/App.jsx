@@ -4,6 +4,7 @@ import Sidebar from "./components/Sidebar";
 import MobileNav from "./components/MobileNav";
 import Dashboard from "./pages/dashboard";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import Missions from "./pages/Missions";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -35,10 +36,11 @@ function AppShell() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/journey" element={<ProtectedRoute><PlaceholderPage title="Your Journey" description="Follow the cybersecurity roadmap from foundations to specialization." /></ProtectedRoute>} />
-          <Route path="/missions" element={<ProtectedRoute><PlaceholderPage title="Missions" description="Complete practical cybersecurity missions and earn XP." /></ProtectedRoute>} />
+          <Route path="/missions" element={<ProtectedRoute><Missions /></ProtectedRoute>} />
           <Route path="/rewards" element={<ProtectedRoute><PlaceholderPage title="Rewards" description="Track your XP, badges, achievements, and streaks." /></ProtectedRoute>} />
           <Route path="/skills" element={<ProtectedRoute><PlaceholderPage title="Skills" description="Build and track your cybersecurity skill profile." /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><PlaceholderPage title="Profile" description="Your CyberQuest profile will live here." /></ProtectedRoute>} />
+          <Route path="/missions/:missionId" element={<ProtectedRoute><PlaceholderPage title="Mission Brief" description="The interactive mission experience is being built next." /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -23,7 +23,9 @@ app.use(cookieParser());
 app.use(express.json({ limit: "20kb" }));
 app.use(helmet());
 
-const phoneSchema = z.object({ phone: z.string().regex(/^\+[1-9]\d{7,14}$/, "Use international format, e.g. +919876543210") });\n\nconst signupSchema = z.object({
+const phoneSchema = z.object({ phone: z.string().regex(/^\+[1-9]\d{7,14}$/, "Use international format, e.g. +919876543210") });
+
+const signupSchema = z.object({
   name: z.string().trim().min(2).max(60),
   email: z.string().trim().email().max(160),
   password: z.string().min(8).max(128),

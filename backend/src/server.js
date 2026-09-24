@@ -23,7 +23,7 @@ app.use(cookieParser());
 app.use(express.json({ limit: "20kb" }));
 app.use(helmet());
 
-const phoneSchema = z.object({ phone: z.string().regex(/^\\+[1-9]\\d{7,14}$/, "Use international format, e.g. +919876543210") });\n\nconst signupSchema = z.object({
+const phoneSchema = z.object({ phone: z.string().regex(/^\+[1-9]\d{7,14}$/, "Use international format, e.g. +919876543210") });\n\nconst signupSchema = z.object({
   name: z.string().trim().min(2).max(60),
   email: z.string().trim().email().max(160),
   password: z.string().min(8).max(128),
@@ -319,7 +319,7 @@ app.get("/api/auth/google/callback", async (req, res) => {
     if (!tokenResponse.ok) return res.status(401).send("Google authorization failed.");
     const profileResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", { headers: { Authorization: `Bearer ${tokens.access_token}` } });
     const profile = await profileResponse.json();
-    if (!profileResponse.ok || !profile.sub || !profile.email) return res.status(400).send("Google did not provide a verified email.");
+    if (!profileResponse.ok || !profile.sub || !profile.email || profile.email_verified !== true) return res.status(400).send("Google did not provide a verified email.");
     const user = await findOrCreateSocialUser({ provider: "google", providerId: profile.sub, email: profile.email, name: profile.name });
     setSessionCookie(res, user);
     res.redirect(process.env.CLIENT_URL || "http://localhost:5173");
@@ -373,7 +373,7 @@ app.post("/api/auth/phone/send", authLimiter, async (req, res) => {
 });
 
 app.post("/api/auth/phone/verify", authLimiter, async (req, res) => {
-  const parsed = phoneSchema.extend({ code: z.string().regex(/^\\d{4,10}$/), name: z.string().trim().min(2).max(60).optional() }).safeParse(req.body);
+  const parsed = phoneSchema.extend({ code: z.string().regex(/^\d{4,10}$/), name: z.string().trim().min(2).max(60).optional() }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ message: "Enter your name, phone number, and verification code." });
   if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_VERIFY_SERVICE_SID) return res.status(503).json({ message: "Phone verification is not configured yet." });
   try {

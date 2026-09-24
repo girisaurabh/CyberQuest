@@ -3,12 +3,12 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Sidebar from "./components/Sidebar";
 import MobileNav from "./components/MobileNav";
 import Dashboard from "./pages/dashboard";
-import PlaceholderPage from "./pages/PlaceholderPage";
 import Missions from "./pages/Missions";
 import MissionDetail from "./pages/MissionDetail";
 import Journey from "./pages/Journey";
 import Rewards from "./pages/Rewards";
 import Skills from "./pages/Skills";
+import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
@@ -35,7 +35,7 @@ function AppShell() {
           <Route path="/missions" element={<ProtectedRoute><Missions /></ProtectedRoute>} />
           <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
           <Route path="/skills" element={<ProtectedRoute><Skills /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><PlaceholderPage title="Profile" description="Your CyberQuest profile will live here." /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/missions/:missionId" element={<ProtectedRoute><MissionDetail /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

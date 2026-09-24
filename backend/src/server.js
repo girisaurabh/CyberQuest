@@ -237,19 +237,152 @@ app.get("/api/missions/:missionId", requireAuth, async (req, res) => {
     const result = await query(`SELECT m.id, m.title, m.description, m.difficulty, m.estimated_minutes, m.xp_reward,
       s.name AS skill_name, p.phase_number, p.name AS phase_name,
       COALESCE(mp.status, 'not_started') AS status,
-      COALESCE(mp.attempts, 0) AS attempts
+      COALESCE(mp.attempts, 0) AS attempts,
+      mc.learn_content, mc.practice_content, mc.question, mc.options
       FROM missions m
       LEFT JOIN skills s ON s.id = m.skill_id
       LEFT JOIN phases p ON p.id = m.phase_id
       LEFT JOIN mission_progress mp ON mp.mission_id = m.id AND mp.user_id = $1
+      LEFT JOIN mission_challenges mc ON mc.mission_id = m.id
       WHERE m.id = $2`, [req.user.sub, missionId]);
 
     if (!result.rowCount) return res.status(404).json({ message: "Mission not found." });
+    if (!result.rows[0].question) return res.status(404).json({ message: "This mission challenge is not available yet." });
     res.json({ mission: result.rows[0] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Unable to load mission." });
   }
+});
+
+app.post("/api/missions/:missionId/attempt", requireAuth, async (req, res) => {
+  const missionId = Number(req.params.missionId);
+  const parsed = z.object({ answer: z.string().trim().min(1).max(200) }).safeParse(req.body);
+
+  if (!Number.isInteger(missionId) || missionId < 1) {
+    return res.status(400).json({ message: "Invalid mission." });
+  }
+  if (!parsed.success) {
+    return res.status(400).json({ message: "Choose an answer before submitting." });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const mission = await client.query(`SELECT m.id, m.xp_reward, s.name AS skill_name,
+      mc.correct_answer, mc.explanation
+      FROM missions m
+      LEFT JOIN skills s ON s.id = m.skill_id
+      LEFT JOIN mission_challenges mc ON mc.mission_id = m.id
+      WHERE m.id = $1
+      FOR UPDATE`, [missionId]);
+
+    if (!mission.rowCount) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Mission not found." });
+    }
+    if (!mission.rows[0].correct_answer) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "This mission challenge is not available yet." });
+    }
+
+    const progress = await client.query(
+      "SELECT status, attempts FROM mission_progress WHERE user_id = $1 AND mission_id = $2 FOR UPDATE",
+      [req.user.sub, missionId]
+    );
+
+    if (progress.rows[0]?.status === "completed") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ message: "Mission already completed." });
+    }
+
+    const answer = parsed.data.answer;
+    const correct = answer === mission.rows[0].correct_answer;
+    const attempts = Number(progress.rows[0]?.attempts || 0) + 1;
+
+    if (!correct) {
+      await client.query(`INSERT INTO mission_progress (user_id, mission_id, status, attempts)
+        VALUES ($1, $2, 'in_progress', 1)
+        ON CONFLICT (user_id, mission_id)
+        DO UPDATE SET status = 'in_progress', attempts = $3`,
+        [req.user.sub, missionId, attempts]
+      );
+      await client.query("COMMIT");
+      return res.json({
+        correct: false,
+        attempts,
+        message: "Not quite. Review the lesson and try again.",
+      });
+    }
+
+    await client.query(`INSERT INTO mission_progress (user_id, mission_id, status, completed_at, attempts)
+      VALUES ($1, $2, 'completed', NOW(), $3)
+      ON CONFLICT (user_id, mission_id)
+      DO UPDATE SET status = 'completed', completed_at = NOW(), attempts = $3`,
+      [req.user.sub, missionId, attempts]
+    );
+
+    await client.query(`UPDATE users
+      SET xp = xp + $2,
+          level = FLOOR((xp + $2) / 500) + 1,
+          streak_days = CASE
+            WHEN last_activity_date = CURRENT_DATE THEN streak_days
+            WHEN last_activity_date = CURRENT_DATE - 1 THEN streak_days + 1
+            ELSE 1
+          END,
+          last_activity_date = CURRENT_DATE,
+          updated_at = NOW()
+      WHERE id = $1`,
+      [req.user.sub, mission.rows[0].xp_reward]
+    );
+
+    await client.query(`INSERT INTO user_badges (user_id, badge_id)
+      SELECT $1, id FROM badges WHERE name = 'First Mission'
+      ON CONFLICT DO NOTHING`, [req.user.sub]);
+
+    if (mission.rows[0].skill_name === "Networking") {
+      await client.query(`INSERT INTO user_badges (user_id, badge_id)
+        SELECT $1, id FROM badges WHERE name = 'Networking Starter'
+        ON CONFLICT DO NOTHING`, [req.user.sub]);
+    }
+    if (mission.rows[0].skill_name === "Linux") {
+      await client.query(`INSERT INTO user_badges (user_id, badge_id)
+        SELECT $1, id FROM badges WHERE name = 'Linux Starter'
+        ON CONFLICT DO NOTHING`, [req.user.sub]);
+    }
+
+    await client.query(`INSERT INTO user_badges (user_id, badge_id)
+      SELECT $1, id FROM badges
+      WHERE name = 'Seven Day Streak'
+        AND EXISTS (SELECT 1 FROM users WHERE id = $1 AND streak_days >= 7)
+      ON CONFLICT DO NOTHING`, [req.user.sub]);
+
+    await client.query("COMMIT");
+
+    const user = await client.query(
+      "SELECT id, name, email, xp, level, streak_days FROM users WHERE id = $1",
+      [req.user.sub]
+    );
+
+    res.json({
+      correct: true,
+      attempts,
+      explanation: mission.rows[0].explanation,
+      message: "Mission complete. XP awarded.",
+      user: user.rows[0],
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error(error);
+    res.status(500).json({ message: "Unable to submit mission answer." });
+  } finally {
+    client.release();
+  }
+});
+
+app.post("/api/missions/:missionId/complete", requireAuth, async (_req, res) => {
+  res.status(410).json({ message: "Direct completion is disabled. Finish the mission challenge instead." });
 });
 
 app.get("/api/missions", requireAuth, async (req, res) => {

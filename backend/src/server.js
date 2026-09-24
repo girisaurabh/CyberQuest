@@ -136,6 +136,66 @@ app.get("/api/journey", requireAuth, async (req, res) => {
   }
 });
 
+app.get("/api/rewards", requireAuth, async (req, res) => {
+  try {
+    const [user, badges] = await Promise.all([
+      query("SELECT xp, level, streak_days FROM users WHERE id = $1", [req.user.sub]),
+      query(`SELECT b.id, b.name, b.description, b.icon, ub.earned_at
+        FROM badges b LEFT JOIN user_badges ub ON ub.badge_id = b.id AND ub.user_id = $1
+        ORDER BY ub.earned_at DESC NULLS LAST, b.id`, [req.user.sub]),
+    ]);
+    res.json({ user: user.rows[0], badges: badges.rows });
+  } catch (error) { console.error(error); res.status(500).json({ message: "Unable to load rewards." }); }
+});
+
+app.get("/api/skills", requireAuth, async (req, res) => {
+  try {
+    const result = await query(`SELECT s.id, s.name, s.description,
+      COUNT(m.id)::int AS total_missions,
+      COUNT(mp.mission_id) FILTER (WHERE mp.status = 'completed')::int AS completed_missions
+      FROM skills s LEFT JOIN missions m ON m.skill_id = s.id
+      LEFT JOIN mission_progress mp ON mp.mission_id = m.id AND mp.user_id = $1
+      GROUP BY s.id, s.name, s.description ORDER BY s.id`, [req.user.sub]);
+    res.json({ skills: result.rows.map((skill) => ({
+      ...skill, progress: skill.total_missions ? Math.round((skill.completed_missions / skill.total_missions) * 100) : 0,
+    })) });
+  } catch (error) { console.error(error); res.status(500).json({ message: "Unable to load skills." }); }
+});
+
+app.get("/api/profile", requireAuth, async (req, res) => {
+  try {
+    const [user, projects] = await Promise.all([
+      query("SELECT id, name, email, phone, provider, xp, level, streak_days, created_at FROM users WHERE id = $1", [req.user.sub]),
+      query("SELECT id, title, description, url, created_at FROM projects WHERE user_id = $1 ORDER BY created_at DESC", [req.user.sub]),
+    ]);
+    if (!user.rowCount) return res.status(404).json({ message: "User not found." });
+    res.json({ user: user.rows[0], projects: projects.rows });
+  } catch (error) { console.error(error); res.status(500).json({ message: "Unable to load your profile." }); }
+});
+
+app.patch("/api/profile", requireAuth, async (req, res) => {
+  const parsed = z.object({ name: z.string().trim().min(2).max(60) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ message: "Enter a valid name." });
+  try {
+    const result = await query("UPDATE users SET name = $2, updated_at = NOW() WHERE id = $1 RETURNING id, name, email, phone, provider, xp, level, streak_days", [req.user.sub, parsed.data.name]);
+    res.json({ user: result.rows[0] });
+  } catch (error) { console.error(error); res.status(500).json({ message: "Unable to update your profile." }); }
+});
+
+app.get("/api/projects", requireAuth, async (req, res) => {
+  const result = await query("SELECT id, title, description, url, created_at FROM projects WHERE user_id = $1 ORDER BY created_at DESC", [req.user.sub]);
+  res.json({ projects: result.rows });
+});
+
+app.post("/api/projects", requireAuth, async (req, res) => {
+  const parsed = z.object({ title: z.string().trim().min(2).max(120), description: z.string().trim().min(10).max(1000), url: z.string().url().max(500).optional().or(z.literal("")) }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ message: "Enter a valid project title, description, and URL." });
+  try {
+    const result = await query("INSERT INTO projects (user_id, title, description, url) VALUES ($1, $2, $3, NULLIF($4, '')) RETURNING id, title, description, url, created_at", [req.user.sub, parsed.data.title, parsed.data.description, parsed.data.url || ""]);
+    res.status(201).json({ project: result.rows[0] });
+  } catch (error) { console.error(error); res.status(500).json({ message: "Unable to add project." }); }
+});
+
 app.get("/api/missions", requireAuth, async (req, res) => {
   try {
     const result = await query(`SELECT m.id, m.title, m.description, m.difficulty, m.estimated_minutes, m.xp_reward,

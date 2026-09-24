@@ -34,4 +34,6 @@ export const api = {
   journey: () => request("/api/journey"),
   missions: () => request("/api/missions"),
   completeMission: (missionId) => request(`/api/missions/${missionId}/complete`, { method: "POST" }),
+  sendPhoneCode: (phone) => request("/api/auth/phone/send", { method: "POST", body: JSON.stringify({ phone }) }),
+  verifyPhone: (payload) => request("/api/auth/phone/verify", { method: "POST", body: JSON.stringify(payload) }),
 };

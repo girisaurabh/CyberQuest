@@ -12,24 +12,16 @@ import Signup from "./pages/Signup";
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading CyberQuest...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  }
-
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">Loading CyberQuest...</div>;
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return children;
 }
 
 function AppShell() {
   const location = useLocation();
   const isAuthPage = location.pathname === "/login" || location.pathname === "/signup";
-
   return (
-    <div className="min-h-screen flex text-white">
+    <div className="min-h-screen flex bg-slate-50 text-slate-900">
       {!isAuthPage && <Sidebar />}
       <main className="flex-1 min-w-0 pb-24 md:pb-0">
         <Routes>
@@ -51,13 +43,7 @@ function AppShell() {
 }
 
 function App() {
-  return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>
-    </BrowserRouter>
-  );
+  return <BrowserRouter><AuthProvider><AppShell /></AuthProvider></BrowserRouter>;
 }
 
 export default App;

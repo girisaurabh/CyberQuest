@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { useAuth } from "../context/AuthContext";
 
 function Dashboard() {
-  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [missionBusy, setMissionBusy] = useState(false);

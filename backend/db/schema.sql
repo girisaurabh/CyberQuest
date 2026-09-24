@@ -126,3 +126,51 @@ INSERT INTO badges (name, description, icon) VALUES
 ('Linux Starter', 'Complete your first Linux mission.', '🐧'),
 ('Seven Day Streak', 'Maintain activity for seven consecutive days.', '🔥')
 ON CONFLICT (name) DO NOTHING;
+
+
+CREATE TABLE IF NOT EXISTS mission_challenges (
+  id SERIAL PRIMARY KEY,
+  mission_id INTEGER UNIQUE NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+  learn_content TEXT NOT NULL,
+  practice_content TEXT NOT NULL,
+  question TEXT NOT NULL,
+  options JSONB NOT NULL,
+  correct_answer TEXT NOT NULL,
+  explanation TEXT NOT NULL
+);
+
+INSERT INTO mission_challenges (mission_id, learn_content, practice_content, question, options, correct_answer, explanation)
+SELECT m.id,
+  'A hostname such as example.com must be translated into an IP address before a device can connect. DNS performs that name-resolution job. In this mission, the packet data is simulated so you can focus on recognizing protocol roles.',
+  'Simulated packet: Source 10.0.0.12 → Destination 10.0.0.1 | Protocol: DNS | Query: example.com | Type: A',
+  'Which protocol is used to resolve a hostname to an IP address?',
+  '["HTTP","DNS","SSH","TLS"]'::jsonb,
+  'DNS',
+  'DNS is the protocol used for translating domain names into IP addresses.'
+FROM missions m
+WHERE m.title = 'Packet Detective'
+ON CONFLICT (mission_id) DO NOTHING;
+
+INSERT INTO mission_challenges (mission_id, learn_content, practice_content, question, options, correct_answer, explanation)
+SELECT m.id,
+  'Linux permissions describe who can read, write, or execute a file. The three permission groups are owner, group, and others. A permission string rw-r----- gives read/write to the owner and read-only access to the group.',
+  'Simulated file: /home/student/notes.txt | Permissions: rw-r----- | Owner: student | Group: analysts',
+  'Who can read this file with permissions rw-r-----?',
+  '["Owner and group","Everyone","Only owner","Nobody"]'::jsonb,
+  'Owner and group',
+  'The owner has r, and the group also has r. Others have no permissions.'
+FROM missions m
+WHERE m.title = 'Linux Explorer'
+ON CONFLICT (mission_id) DO NOTHING;
+
+INSERT INTO mission_challenges (mission_id, learn_content, practice_content, question, options, correct_answer, explanation)
+SELECT m.id,
+  'HTTP methods describe what a client wants to do with a resource. GET is commonly used to retrieve a resource, while POST usually sends data to create or trigger a server-side action. This exercise uses a simulated request.',
+  'Simulated request: GET /dashboard HTTP/1.1 | Host: training.cyberquest.local | Cookie: session=simulated',
+  'Which HTTP method is commonly used to retrieve a resource without changing server state?',
+  '["GET","POST","PUT","DELETE"]'::jsonb,
+  'GET',
+  'GET is designed for retrieving a representation of a resource and is intended to be safe to repeat.'
+FROM missions m
+WHERE m.title = 'HTTP Detective'
+ON CONFLICT (mission_id) DO NOTHING;

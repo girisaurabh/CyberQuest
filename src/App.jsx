@@ -5,6 +5,7 @@ import MobileNav from "./components/MobileNav";
 import Dashboard from "./pages/dashboard";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import Missions from "./pages/Missions";
+import MissionDetail from "./pages/MissionDetail";
 import Journey from "./pages/Journey";
 import Rewards from "./pages/Rewards";
 import Skills from "./pages/Skills";
@@ -35,7 +36,7 @@ function AppShell() {
           <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
           <Route path="/skills" element={<ProtectedRoute><Skills /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><PlaceholderPage title="Profile" description="Your CyberQuest profile will live here." /></ProtectedRoute>} />
-          <Route path="/missions/:missionId" element={<ProtectedRoute><PlaceholderPage title="Mission Brief" description="The interactive mission experience is being built next." /></ProtectedRoute>} />
+          <Route path="/missions/:missionId" element={<ProtectedRoute><MissionDetail /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

@@ -276,7 +276,7 @@ app.post("/api/missions/:missionId/attempt", requireAuth, async (req, res) => {
       LEFT JOIN skills s ON s.id = m.skill_id
       LEFT JOIN mission_challenges mc ON mc.mission_id = m.id
       WHERE m.id = $1
-      FOR UPDATE`, [missionId]);
+      FOR UPDATE OF m`, [missionId]);
 
     if (!mission.rowCount) {
       await client.query("ROLLBACK");

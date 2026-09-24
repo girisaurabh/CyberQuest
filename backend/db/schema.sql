@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS users (
   streak_days INTEGER NOT NULL DEFAULT 0 CHECK (streak_days >= 0),
   last_activity_date DATE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  provider TEXT,\n  provider_id TEXT
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  provider TEXT,
+  provider_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS phases (

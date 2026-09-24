@@ -30,4 +30,7 @@ export const api = {
   }),
   logout: () => request("/api/auth/logout", { method: "POST" }),
   me: () => request("/api/auth/me"),
+  dashboard: () => request("/api/dashboard"),
+  missions: () => request("/api/missions"),
+  completeMission: (missionId) => request(`/api/missions/${missionId}/complete`, { method: "POST" }),
 };

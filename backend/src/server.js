@@ -1,4 +1,7 @@
 import "dotenv/config";
+import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -31,6 +34,15 @@ function assertLocalConfig() {
 
 assertLocalConfig();
 const isProduction = process.env.NODE_ENV === "production";
+const serverDirectory = dirname(fileURLToPath(import.meta.url));
+
+async function initializeDatabase() {
+  const schemaPath = resolve(serverDirectory, "../db/schema.sql");
+  const schema = await readFile(schemaPath, "utf8");
+  await pool.query(schema);
+  await pool.query("SELECT 1");
+  console.log("CyberQuest database is ready.");
+}
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
 
@@ -101,7 +113,8 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
         LEFT JOIN skills s ON s.id = m.skill_id
         LEFT JOIN phases p ON p.id = m.phase_id
         LEFT JOIN mission_progress mp ON mp.mission_id = m.id AND mp.user_id = $1
-        ORDER BY CASE WHEN COALESCE(mp.status, 'not_started') = 'completed' THEN 1 ELSE 0 END, m.sort_order, m.id
+        WHERE COALESCE(mp.status, 'not_started') <> 'completed'
+        ORDER BY m.sort_order, m.id
         LIMIT 1`, [req.user.sub])
     ]);
 
@@ -212,6 +225,31 @@ app.post("/api/projects", requireAuth, async (req, res) => {
     const result = await query("INSERT INTO projects (user_id, title, description, url) VALUES ($1, $2, $3, NULLIF($4, '')) RETURNING id, title, description, url, created_at", [req.user.sub, parsed.data.title, parsed.data.description, parsed.data.url || ""]);
     res.status(201).json({ project: result.rows[0] });
   } catch (error) { console.error(error); res.status(500).json({ message: "Unable to add project." }); }
+});
+
+app.get("/api/missions/:missionId", requireAuth, async (req, res) => {
+  const missionId = Number(req.params.missionId);
+  if (!Number.isInteger(missionId) || missionId < 1) {
+    return res.status(400).json({ message: "Invalid mission." });
+  }
+
+  try {
+    const result = await query(`SELECT m.id, m.title, m.description, m.difficulty, m.estimated_minutes, m.xp_reward,
+      s.name AS skill_name, p.phase_number, p.name AS phase_name,
+      COALESCE(mp.status, 'not_started') AS status,
+      COALESCE(mp.attempts, 0) AS attempts
+      FROM missions m
+      LEFT JOIN skills s ON s.id = m.skill_id
+      LEFT JOIN phases p ON p.id = m.phase_id
+      LEFT JOIN mission_progress mp ON mp.mission_id = m.id AND mp.user_id = $1
+      WHERE m.id = $2`, [req.user.sub, missionId]);
+
+    if (!result.rowCount) return res.status(404).json({ message: "Mission not found." });
+    res.json({ mission: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Unable to load mission." });
+  }
 });
 
 app.get("/api/missions", requireAuth, async (req, res) => {
@@ -505,8 +543,15 @@ app.post("/api/auth/signup", authLimiter, async (req, res) => {
     res.cookie("cyberquest_session", token, { httpOnly: true, secure: isProduction, sameSite: "lax", maxAge: 7 * 24 * 60 * 60 * 1000 });
     res.status(201).json({ user });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Unable to create the account." });
+    console.error("Signup error:", error);
+    if (error?.code === "23505") {
+      return res.status(409).json({ message: "An account with this email already exists." });
+    }
+    res.status(500).json({
+      message: isProduction
+        ? "Unable to create the account."
+        : `Unable to create the account. Database error: ${error?.message || "unknown error"}`,
+    });
   }
 });
 
@@ -520,7 +565,7 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
     const result = await query("SELECT id, name, email, password_hash, xp, level, streak_days FROM users WHERE email = $1", [email.toLowerCase()]);
     const user = result.rows[0];
 
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
 
@@ -553,6 +598,16 @@ app.get("/api/auth/me", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`CyberQuest API running on http://localhost:${port}`);
-});
+async function startServer() {
+  try {
+    await initializeDatabase();
+    app.listen(port, () => {
+      console.log(`CyberQuest API running on http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error("CyberQuest backend failed to start:", error);
+    process.exit(1);
+  }
+}
+
+startServer();

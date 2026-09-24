@@ -13,6 +13,7 @@ import { pool, query } from "./db.js";
 
 const app = express();
 const port = Number(process.env.PORT || 5000);
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) throw new Error("JWT_SECRET must be set to a random value of at least 32 characters.");
 const isProduction = process.env.NODE_ENV === "production";
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
@@ -64,6 +65,7 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
       query("SELECT id, name, email, xp, level, streak_days FROM users WHERE id = $1", [req.user.sub]),
       query(`SELECT
         (SELECT COUNT(*) FROM missions) AS total_missions,
+        (SELECT COUNT(*) FROM phases) AS total_phases,
         (SELECT COUNT(*) FROM mission_progress WHERE user_id = $1 AND status = 'completed') AS completed_missions,
         (SELECT COUNT(*) FROM projects WHERE user_id = $1) AS projects,
         (SELECT COUNT(*) FROM user_badges WHERE user_id = $1) AS badges`, [req.user.sub]),
@@ -95,7 +97,7 @@ app.get("/api/dashboard", requireAuth, async (req, res) => {
       user: userResult.rows[0],
       progress: total ? Math.round((completed / total) * 100) : 0,
       stats: {
-        modules: 8,
+        modules: Number(stats.total_phases),
         missions: total,
         completedMissions: completed,
         projects: Number(stats.projects),
@@ -124,28 +126,6 @@ app.get("/api/journey", requireAuth, async (req, res) => {
       LEFT JOIN mission_progress mp ON mp.mission_id = m.id AND mp.user_id = $1
       GROUP BY p.id, p.phase_number, p.name, p.description
       ORDER BY p.phase_number`, [req.user.sub]);
-
-    res.json({ phases: result.rows.map((phase) => ({
-      ...phase,
-      progress: phase.total_missions ? Math.round((phase.completed_missions / phase.total_missions) * 100) : 0,
-    })) });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Unable to load your journey." });
-  }
-});
-
-app.get("/api/journey", requireAuth, async (req, res) => {
-  try {
-    const result = await query(`SELECT p.id, p.phase_number, p.name, p.description,
-      COUNT(m.id)::int AS total_missions,
-      COUNT(mp.mission_id) FILTER (WHERE mp.status = 'completed')::int AS completed_missions
-      FROM phases p
-      LEFT JOIN missions m ON m.phase_id = p.id
-      LEFT JOIN mission_progress mp ON mp.mission_id = m.id AND mp.user_id = $1
-      GROUP BY p.id, p.phase_number, p.name, p.description
-      ORDER BY p.phase_number`, [req.user.sub]);
-
     res.json({ phases: result.rows.map((phase) => ({
       ...phase,
       progress: phase.total_missions ? Math.round((phase.completed_missions / phase.total_missions) * 100) : 0,
@@ -393,7 +373,7 @@ app.post("/api/auth/phone/send", authLimiter, async (req, res) => {
 });
 
 app.post("/api/auth/phone/verify", authLimiter, async (req, res) => {
-  const parsed = phoneSchema.extend({ code: z.string().regex(/^\\d{4,10}$/), name: z.string().trim().min(2).max(60) }).safeParse(req.body);
+  const parsed = phoneSchema.extend({ code: z.string().regex(/^\\d{4,10}$/), name: z.string().trim().min(2).max(60).optional() }).safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ message: "Enter your name, phone number, and verification code." });
   if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_VERIFY_SERVICE_SID) return res.status(503).json({ message: "Phone verification is not configured yet." });
   try {
@@ -405,7 +385,7 @@ app.post("/api/auth/phone/verify", authLimiter, async (req, res) => {
     if (result.rowCount) {
       user = result.rows[0];
     } else {
-      result = await query("INSERT INTO users (name, phone) VALUES ($1, $2) RETURNING id, name, email, xp, level, streak_days", [parsed.data.name, parsed.data.phone]);
+      result = await query("INSERT INTO users (name, phone) VALUES ($1, $2) RETURNING id, name, email, xp, level, streak_days", [parsed.data.name || "CyberQuest Learner", parsed.data.phone]);
       user = result.rows[0];
     }
     setSessionCookie(res, user);

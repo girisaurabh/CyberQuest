@@ -131,6 +131,27 @@ app.get("/api/journey", requireAuth, async (req, res) => {
   }
 });
 
+app.get("/api/journey", requireAuth, async (req, res) => {
+  try {
+    const result = await query(`SELECT p.id, p.phase_number, p.name, p.description,
+      COUNT(m.id)::int AS total_missions,
+      COUNT(mp.mission_id) FILTER (WHERE mp.status = 'completed')::int AS completed_missions
+      FROM phases p
+      LEFT JOIN missions m ON m.phase_id = p.id
+      LEFT JOIN mission_progress mp ON mp.mission_id = m.id AND mp.user_id = $1
+      GROUP BY p.id, p.phase_number, p.name, p.description
+      ORDER BY p.phase_number`, [req.user.sub]);
+
+    res.json({ phases: result.rows.map((phase) => ({
+      ...phase,
+      progress: phase.total_missions ? Math.round((phase.completed_missions / phase.total_missions) * 100) : 0,
+    })) });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Unable to load your journey." });
+  }
+});
+
 app.get("/api/missions", requireAuth, async (req, res) => {
   try {
     const result = await query(`SELECT m.id, m.title, m.description, m.difficulty, m.estimated_minutes, m.xp_reward,

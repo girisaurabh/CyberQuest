@@ -3,8 +3,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(60) NOT NULL,
-  email VARCHAR(160) NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL,
+  email VARCHAR(160) UNIQUE,
+  phone VARCHAR(20) UNIQUE,
+  password_hash TEXT,
   xp INTEGER NOT NULL DEFAULT 0 CHECK (xp >= 0),
   level INTEGER NOT NULL DEFAULT 1 CHECK (level >= 1),
   streak_days INTEGER NOT NULL DEFAULT 0 CHECK (streak_days >= 0),
@@ -71,6 +72,7 @@ CREATE TABLE IF NOT EXISTS projects (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS users_provider_identity_idx ON users (provider, provider_id) WHERE provider IS NOT NULL AND provider_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);
 CREATE INDEX IF NOT EXISTS mission_progress_user_idx ON mission_progress (user_id);
 CREATE INDEX IF NOT EXISTS missions_phase_idx ON missions (phase_id);

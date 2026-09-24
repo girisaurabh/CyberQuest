@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "node:crypto";
 import twilio from "twilio";
+import helmet from "helmet";
 import { z } from "zod";
 import { pool, query } from "./db.js";
 

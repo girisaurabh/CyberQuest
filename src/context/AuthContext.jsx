@@ -27,7 +27,12 @@ export function AuthProvider({ children }) {
       setUser(result.user);
       return result.user;
     },
-    async phoneLogin(payload) {\n      const result = await api.verifyPhone(payload);\n      setUser(result.user);\n      return result.user;\n    },\n    async logout() {
+    async phoneLogin(payload) {
+      const result = await api.verifyPhone(payload);
+      setUser(result.user);
+      return result.user;
+    },
+    async logout() {
       await api.logout();
       setUser(null);
     },

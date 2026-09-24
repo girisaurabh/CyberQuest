@@ -12,62 +12,35 @@ const items = [
 function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  async function handleLogout() {
-    await logout();
-    navigate("/login", { replace: true });
-  }
-
+  async function handleLogout() { await logout(); navigate("/login", { replace: true }); }
   const name = user?.name || "CyberQuest";
   const initial = name.charAt(0).toUpperCase();
 
   return (
     <aside className="hidden md:flex w-72 min-h-screen p-4 sticky top-0">
-      <div className="w-full min-h-[calc(100vh-2rem)] flex flex-col rounded-3xl border border-white/10 bg-white/[0.035] backdrop-blur-2xl shadow-2xl shadow-blue-950/20">
+      <div className="w-full min-h-[calc(100vh-2rem)] flex flex-col rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="px-6 pt-7 pb-8">
           <NavLink to="/" className="flex items-center gap-3">
-            <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <span className="text-xl">🛡️</span>
-              <div className="absolute inset-0 rounded-2xl bg-blue-400/20 blur-md -z-10" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Cyber<span className="text-cyan-400">Quest</span></h1>
-              <p className="text-[11px] text-slate-500 mt-0.5">Learn • Practice • Level Up</p>
-            </div>
+            <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20"><span className="text-xl">🛡️</span></div>
+            <div><h1 className="text-xl font-bold tracking-tight text-slate-900">Cyber<span className="text-blue-600">Quest</span></h1><p className="text-[11px] text-slate-400 mt-0.5">Learn • Practice • Level Up</p></div>
           </NavLink>
         </div>
-
         <div className="px-3">
-          <p className="px-3 mb-3 text-[10px] font-semibold tracking-[0.18em] text-slate-600">MAIN MENU</p>
-          <nav className="space-y-1.5">
-            {items.map((item) => <NavItem key={item.path} {...item} />)}
-          </nav>
+          <p className="px-3 mb-3 text-[10px] font-semibold tracking-[0.18em] text-slate-400">MAIN MENU</p>
+          <nav className="space-y-1.5">{items.map((item) => <NavItem key={item.path} {...item} />)}</nav>
         </div>
-
         <div className="flex-1" />
-
-        <div className="mx-4 mb-4 p-4 rounded-2xl border border-orange-400/10 bg-orange-400/[0.04]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-500">DAILY STREAK</p>
-              <p className="text-lg font-bold mt-1">🔥 {user?.streak_days ?? 0} days</p>
-            </div>
-            <div className="w-9 h-9 rounded-xl bg-orange-400/10 flex items-center justify-center">🔥</div>
-          </div>
+        <div className="mx-4 mb-4 p-4 rounded-2xl border border-orange-100 bg-orange-50">
+          <p className="text-xs text-slate-500">DAILY STREAK</p>
+          <div className="flex items-center justify-between mt-1"><p className="text-lg font-bold text-slate-900">🔥 {user?.streak_days ?? 0} days</p><span className="text-lg">🔥</span></div>
         </div>
-
-        <div className="border-t border-white/5 p-4">
-          <NavLink to="/profile" className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center font-bold">{initial}</div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-sm font-semibold truncate">{name}</p>
-              <p className="text-xs text-slate-500">Level {user?.level ?? 1} • {user?.xp ?? 0} XP</p>
-            </div>
-            <span className="text-slate-600">›</span>
+        <div className="border-t border-slate-100 p-4">
+          <NavLink to="/profile" className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">{initial}</div>
+            <div className="flex-1 text-left min-w-0"><p className="text-sm font-semibold truncate text-slate-900">{name}</p><p className="text-xs text-slate-400">Level {user?.level ?? 1} • {user?.xp ?? 0} XP</p></div>
+            <span className="text-slate-300">›</span>
           </NavLink>
-          <button onClick={handleLogout} className="w-full mt-2 px-3 py-2 text-xs text-slate-500 hover:text-red-300 transition text-left">
-            Sign out
-          </button>
+          <button onClick={handleLogout} className="w-full mt-2 px-3 py-2 text-xs text-slate-400 hover:text-red-600 transition text-left">Sign out</button>
         </div>
       </div>
     </aside>
@@ -75,21 +48,8 @@ function Sidebar() {
 }
 
 function NavItem({ icon, label, path }) {
-  return (
-    <NavLink
-      to={path}
-      end={path === "/"}
-      className={({ isActive }) => `group relative w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200 ${isActive ? "bg-gradient-to-r from-blue-500/15 to-violet-500/10 text-white border border-blue-400/10 shadow-lg shadow-blue-950/20" : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.035]"}`}
-    >
-      {({ isActive }) => (
-        <>
-          {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 rounded-r-full bg-cyan-400 shadow-lg shadow-cyan-400/50" />}
-          <span className={`text-xl w-6 text-center transition ${isActive ? "text-cyan-400" : "text-slate-500 group-hover:text-slate-300"}`}>{icon}</span>
-          <span className="text-sm font-medium">{label}</span>
-        </>
-      )}
-    </NavLink>
-  );
+  return <NavLink to={path} end={path === "/"} className={({ isActive }) => `group relative w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition ${isActive ? "bg-blue-50 text-blue-700 border border-blue-100" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"}`}>
+    {({ isActive }) => <><span className={`text-xl w-6 text-center ${isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}`}>{icon}</span><span className="text-sm font-medium">{label}</span></>}
+  </NavLink>;
 }
-
 export default Sidebar;
